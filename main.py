@@ -39,12 +39,13 @@ class AnimeModule(BaseModule):
                     file_url = str(i.file_url)
                     chat_id = message.chat.id
                     if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
-                        self.sent_photos.setdefault(chat_id, []).append(file_url)
                         try: 
                             await message.reply_photo(
                                 photo=file_url,
                                 caption=self.S['credit'].format(file_url=file_url)
                             )
+                            
+                            self.sent_photos.setdefault(chat_id, []).append(file_url)
                             await asyncio.sleep(1)
                         except errors.WebpageCurlFailed as e:
                             self.logger.error(e)
