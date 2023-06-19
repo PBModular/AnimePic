@@ -43,7 +43,7 @@ class AnimeModule(BaseModule):
                         try: 
                             await message.reply_photo(
                                 photo=file_url,
-                                caption=self.S["credit"]
+                                caption=self.S['credit'].format(file_url=file_url)
                             )
                             await asyncio.sleep(1)
                         except errors.WebpageCurlFailed as e:

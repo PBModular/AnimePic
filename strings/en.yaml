@@ -1,2 +1,4 @@
 tags_not_found: No images found for the specified tags.
-credit: Here's an image from Gelbooru.
+credit: | 
+  "Here's an image from Gelbooru.
+  <a href="{file_url}">Link</a>

@@ -1,2 +1,4 @@
 tags_not_found: Не найдено изображений для указанных тегов.
-credit: Вот изображение из Gelbooru.
+credit: |
+  Вот изображение из Gelbooru.
+  <a href="{file_url}">Ссылка</a>
