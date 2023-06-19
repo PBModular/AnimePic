@@ -1,11 +1,18 @@
-from pyrogram import Client
+from pyrogram import Client, errors
 from pyrogram.types import Message
 from base.module import BaseModule, command
 from python_gelbooru import AsyncGelbooru
+import asyncio
 
 class AnimeModule(BaseModule):
     def on_init(self):
-        self.api_key, self.user_id = "api_id", "user_id"
+        self.api_key, self.user_id = "ddef325ed8ede716bc0857999f4a8e5ccf5d3be4662a4c89dc71734b3c609e04", "1269231"
+        self.sent_photos = {}
+        
+    async def clear_sent_photos(self, chat_id):
+        await asyncio.sleep(3600)
+        if chat_id in self.sent_photos:
+            del self.sent_photos[chat_id]
         
     @command("pic")
     async def get_gelImage(self, bot: Client, message: Message):
@@ -29,7 +36,17 @@ class AnimeModule(BaseModule):
             
             if results:
                 for i in results:
-                    await message.reply_photo(
-                        photo=str(i.file_url),
-                        caption=self.S["credit"]
-                    )
+                    file_url = str(i.file_url)
+                    chat_id = message.chat.id
+                    if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
+                        self.sent_photos.setdefault(chat_id, []).append(file_url)
+                        try: 
+                            await message.reply_photo(
+                                photo=file_url,
+                                caption=self.S["credit"]
+                            )
+                            await asyncio.sleep(1)
+                        except errors.WebpageCurlFailed as e:
+                            self.logger.error(e)
+        
+        asyncio.ensure_future(self.clear_sent_photos(message.chat.id))
