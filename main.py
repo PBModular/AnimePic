@@ -57,16 +57,12 @@ class AnimeModule(BaseModule):
                         self.sent_photos.setdefault(chat_id, []).append(file_url)
                         await asyncio.sleep(1)
                         
-                    except errors.WebpageCurlFailed as e:
-                        self.logger.warning(e)
-                        await message.reply(self.S["curl_error"])
-                        continue
-                
-                    except errors.FloodWait as e:
-                        self.logger.warning(e)
-                        await asyncio.sleep(31)
-                        continue
-                    
-                    except Exception as e:
+                    except (errors.WebpageCurlFailed, errors.FloodWait, Exception) as e:
                         self.logger.error(e)
-                        await message.reply(self.S["error"])
+                        if isinstance(e, errors.WebpageCurlFailed):
+                            await message.reply(self.S["curl_error"])
+                        elif isinstance(e, errors.FloodWait):
+                            await asyncio.sleep(31)
+                        else:
+                            await message.reply(self.S["error"])
+                        continue
