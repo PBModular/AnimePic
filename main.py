@@ -33,7 +33,7 @@ class AnimeModule(BaseModule):
             return
 
         await self.process(bot, message, tags, limit)
-        asyncio.ensure_future(self.clear_sent_photos(message.chat.id))
+        asyncio.create_task(self.clear_sent_photos(message.chat.id))
         
     async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
