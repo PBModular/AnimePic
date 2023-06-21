@@ -3,3 +3,4 @@ credit: |
   "Here's an image from Gelbooru.
   <a href="{file_url}">Link</a>
 curl_error: Image URL could not be processed. A Pavel Durov moment?
+error: Unexpected error. Check bot logs.

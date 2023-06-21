@@ -32,8 +32,6 @@ class AnimeModule(BaseModule):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
                 results = await gel.search_posts(tags, limit=int(limit), random=True)
-                self.logger.info(tags)
-                self.logger.info(limit)
             except KeyError:
                 await message.reply_text(self.S["tags_not_found"])
                 return
@@ -61,3 +59,7 @@ class AnimeModule(BaseModule):
                         self.logger.warning(e)
                         await asyncio.sleep(31)
                         continue
+                    
+                    except Exception as e:
+                        self.logger.error(e)
+                        await message.reply(self.S["error"])
