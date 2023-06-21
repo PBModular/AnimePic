@@ -6,7 +6,7 @@ import asyncio
 
 class AnimeModule(BaseModule):
     def on_init(self):
-        self.api_key, self.user_id = "ddef325ed8ede716bc0857999f4a8e5ccf5d3be4662a4c89dc71734b3c609e04", "1269231"
+        self.api_key, self.user_id = "None", "None" # Optional
         self.sent_photos = {}
         
     async def clear_sent_photos(self, chat_id):
