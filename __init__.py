@@ -1,1 +1,1 @@
-from .main import AnimeModule
+from .main import AnimePicModule

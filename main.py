@@ -4,7 +4,7 @@ from base.module import BaseModule, command
 from python_gelbooru import AsyncGelbooru
 import asyncio
 
-class AnimeModule(BaseModule):
+class AnimePicModule(BaseModule):
     def on_init(self):
         self.api_key, self.user_id = "None", "None" # Optional
         self.sent_photos = {}
@@ -15,7 +15,7 @@ class AnimeModule(BaseModule):
             del self.sent_photos[chat_id]
         
     @command("pic")
-    async def get_gelImage(self, bot: Client, message: Message):
+    async def pic_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
 
         limit = 1
