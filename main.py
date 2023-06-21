@@ -25,9 +25,15 @@ class AnimeModule(BaseModule):
             limit = int(args[0])
             tags = args[1:]
         
+        await self.process(bot, message, tags, limit)
+        asyncio.ensure_future(self.clear_sent_photos(message.chat.id))
+        
+    async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
                 results = await gel.search_posts(tags, limit=int(limit), random=True)
+                self.logger.info(tags)
+                self.logger.info(limit)
             except KeyError:
                 await message.reply_text(self.S["tags_not_found"])
                 return
@@ -48,11 +54,10 @@ class AnimeModule(BaseModule):
                         
                     except errors.WebpageCurlFailed as e:
                         self.logger.warning(e)
+                        await message.reply(self.S["curl_error"])
                         continue
                 
                     except errors.FloodWait as e:
                         self.logger.warning(e)
                         await asyncio.sleep(31)
                         continue
-                        
-        asyncio.ensure_future(self.clear_sent_photos(message.chat.id))
