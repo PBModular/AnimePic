@@ -1,5 +1,5 @@
 from pyrogram import Client, errors
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from base.module import BaseModule, command
 from python_gelbooru import AsyncGelbooru
 import asyncio
@@ -49,9 +49,11 @@ class AnimeModule(BaseModule):
                 chat_id = message.chat.id
                 if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
                     try: 
+                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["button"].format(file_url=file_url), url=file_url)]])
                         await message.reply_photo(
                             photo=file_url,
-                            caption=self.S['credit'].format(file_url=file_url)
+                            caption=self.S['credit'],
+                            reply_markup=keyboard
                         )
                         
                         self.sent_photos.setdefault(chat_id, []).append(file_url)
