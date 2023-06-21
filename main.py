@@ -16,15 +16,22 @@ class AnimeModule(BaseModule):
         
     @command("pic")
     async def get_gelImage(self, bot: Client, message: Message):
-        args = message.text.split(" ")[1:]
-        
-        if len(args) == 0 or not args[0].isdigit():
-            limit = 1
-            tags = args
-        else:
-            limit = int(args[0])
-            tags = args[1:]
-        
+        args = message.text.split()[1:]
+
+        limit = 1
+        tags = []
+
+        if args:
+            if args[0].isdigit():
+                limit = int(args[0])
+                tags = args[1:]
+            else:
+                tags = args
+
+        if not tags:
+            await message.reply(self.S["arg_not_found"])
+            return
+
         await self.process(bot, message, tags, limit)
         asyncio.ensure_future(self.clear_sent_photos(message.chat.id))
         
