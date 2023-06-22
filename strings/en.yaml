@@ -2,14 +2,9 @@ pic:
   arg_not_found: Please specify search tags!
 
 rating:
-  usage: |
-   Please specify rating tags! Example:
-   <code>/setrating rs</code>
-   
-   <b>Available ratings:</b>
-   • <code>rs</code> <i>- Safe (Default)</i>
-   • <code>rq</code> <i>- Questionable</i>
-   • <code>re</code> <i>- Explicit</i>
+  arg_invalid: |
+   Please specify rating tags!
+   Run <code>/help AnimePic</code> for more details!
   success: Rating "{rating}" is set by default for this chat room.
  
 process:
@@ -18,3 +13,22 @@ process:
   button: Link to image
   curl_error: Image URL could not be processed. A Pavel Durov moment?
   error: Unexpected error. Check bot logs.
+
+help: |
+   <b>Description:</b> 
+   This module is designed to request and view pictures from Gelbooru directly in Telegram. Thanks for using it!
+
+   <b>Example:</b> <code>/pic 5 cyberpunk</code>
+   • <code>/pic</code> – <i>Main command for image search</i>
+   • <code>5</code> – <i>Number of images (Optional, 1 if not specified)</i>
+   • <code>cyberpunk</code> – <i>Tag for search (Can be many)</i>
+
+   <b>Example:</b> <code>/setrating rs</code>
+   • <code>/setrating</code> – <i>Command for setting the rating</i>
+   • <code>rs</code> – <i>Rating</i>
+
+   <b>Available ratings:</b>
+   • <code>rs</code> <i>– Safe (Default)</i>
+   • <code>rq</code> <i>– Questionable</i>
+   • <code>re</code> <i>– Explicit</i>
+   • <code>r</code> <i>– Random</i>

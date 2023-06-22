@@ -17,6 +17,10 @@ class AnimePicModule(BaseModule):
         }
         
     @property
+    def help_page(self):
+        return self.S["help"]
+ 
+    @property
     def db_meta(self):
         return Base.metadata    
     
@@ -80,7 +84,7 @@ class AnimePicModule(BaseModule):
         args = message.text.split()[1:]
 
         if not args:
-            await message.reply(self.S["rating"]["usage"])
+            await message.reply(self.S["rating"]["arg_invalid"])
             return
 
         rating = args[0]
