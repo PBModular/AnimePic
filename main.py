@@ -10,9 +10,6 @@ class AnimePicModule(BaseModule):
     def on_init(self):
         self.api_key, self.user_id = "None", "None"  # Optional
         self.sent_photos = {}
-        self.default_rating = {
-            "rs": "rating%3asafe"
-        }
         self.ratings = {
             "re": "rating%3aexplicit",
             "rq": "rating%3aquestionable",
@@ -33,7 +30,7 @@ class AnimePicModule(BaseModule):
             chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
             if chat_state is not None:
                 return chat_state.rating
-        return None
+        return "rating%3asafe"
         
     async def set_chat_rating(self, chat_id, rating):
         async with self.db.session_maker() as session:
@@ -70,8 +67,6 @@ class AnimePicModule(BaseModule):
 
         chat_id = message.chat.id
         rating = await self.get_chat_rating(chat_id)
-        if rating is None:
-            rating = self.default_rating["rs"]
         if rating != "random":
             tags.insert(0, rating)
 
