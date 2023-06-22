@@ -3,7 +3,7 @@
 This module for [PBModular](https://github.com/PBModular/bot) is designed to request and view pictures from Gelbooru directly in Telegram.
 
 ### Installation
-- <code>/mod_install https://github.com/PBModularModules/AnimePic</code>
+- <code>/mod_install https://github.com/PBModular/AnimePic</code>
 
 **Optional:**
 
