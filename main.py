@@ -42,6 +42,8 @@ class AnimePicModule(BaseModule):
                 chat_state = ChatState(chat_id=chat_id)
             if rating in self.ratings:
                 chat_state.rating = self.ratings[rating]
+            elif rating == "r":
+                chat_state.rating = "random"
             else:
                 await session.rollback()
                 return False  # Invalid rating
@@ -70,7 +72,8 @@ class AnimePicModule(BaseModule):
         rating = await self.get_chat_rating(chat_id)
         if rating is None:
             rating = self.default_rating["rs"]
-        tags.insert(0, rating)
+        if rating != "random":
+            tags.insert(0, rating)
 
         await self.process(bot, message, tags, limit)
         asyncio.create_task(self.clear_sent_photos(message.chat.id))
