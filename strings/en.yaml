@@ -1,6 +1,20 @@
-arg_not_found: Please specify search tags!
-tags_not_found: No images found for the specified tags.
-credit: Here's an image from Gelbooru.
-button: Link to image
-curl_error: Image URL could not be processed. A Pavel Durov moment?
-error: Unexpected error. Check bot logs.
+pic:
+  arg_not_found: Please specify search tags!
+
+rating:
+  usage: |
+   Please specify rating tags! Example:
+   <code>/setrating rs</code>
+   
+   <b>Available ratings:</b>
+   • <code>rs</code> <i>- Safe (Default)</i>
+   • <code>rq</code> <i>- Questionable</i>
+   • <code>re</code> <i>- Explicit</i>
+  success: Rating "{rating}" is set by default for this chat room.
+ 
+process:
+  tags_not_found: No images found for the specified tags.
+  credit: Here's an image from Gelbooru.
+  button: Link to image
+  curl_error: Image URL could not be processed. A Pavel Durov moment?
+  error: Unexpected error. Check bot logs.

@@ -63,7 +63,7 @@ class AnimePicModule(BaseModule):
                 tags = args
 
         if not tags:
-            await message.reply(self.S["arg_not_found"])
+            await message.reply(self.S["pic"]["arg_not_found"])
             return
 
         chat_id = message.chat.id
@@ -82,13 +82,15 @@ class AnimePicModule(BaseModule):
         args = message.text.split()[1:]
 
         if not args:
-            await message.reply(self.S["arg_not_found"])
+            await message.reply(self.S["rating"]["usage"])
             return
 
         rating = args[0]
-        await self.set_chat_rating(message.chat.id, rating)
-        await message.reply(f"Рейтинг для чата установлен на {rating}")
-
+        success = await self.set_chat_rating(message.chat.id, rating)
+        if success:
+            await message.reply(self.S["rating"]["success"].format(rating=rating))
+        else:
+            await message.reply(self.S["rating"]["usage"])
 
 
     async def process(self, bot, message, tags, limit):
@@ -96,7 +98,7 @@ class AnimePicModule(BaseModule):
             try:
                 results = await gel.search_posts(tags, limit=int(limit), random=True)
             except KeyError:
-                await message.reply_text(self.S["tags_not_found"])
+                await message.reply(self.S["process"]["tags_not_found"])
                 return
             
         if results:
@@ -104,11 +106,11 @@ class AnimePicModule(BaseModule):
                 file_url = str(photo.file_url)
                 chat_id = message.chat.id
                 if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
-                    try: 
-                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["button"].format(file_url=file_url), url=file_url)]])
+                    try:
+                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)]])
                         await message.reply_photo(
                             photo=file_url,
-                            caption=self.S['credit'],
+                            caption=self.S["process"]['credit'],
                             reply_markup=keyboard
                         )
                         
@@ -118,9 +120,9 @@ class AnimePicModule(BaseModule):
                     except (errors.WebpageCurlFailed, errors.FloodWait, Exception) as e:
                         self.logger.error(e)
                         if isinstance(e, errors.WebpageCurlFailed):
-                            await message.reply(self.S["curl_error"])
+                            await message.reply(self.S["process"]["curl_error"])
                         elif isinstance(e, errors.FloodWait):
                             await asyncio.sleep(31)
                         else:
-                            await message.reply(self.S["error"])
+                            await message.reply(self.S["process"]["error"])
                         continue
