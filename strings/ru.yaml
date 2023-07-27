@@ -14,6 +14,7 @@ rating:
     • <code>rq</code> <i>- Спорный</i>
     • <code>re</code> <i>- Откровенный</i>
     • <code>r</code> <i>– Случайный</i>
+  current: Текущий рейтинг - <i>"{rating}"</i>.
 
 process:
   tags_not_found: Не найдено изображений для указанных тегов.
@@ -32,8 +33,11 @@ help: |
    • <code>cyberpunk</code> – <i>Тег для поиска (Может быть несколько)</i>
 
    <b>Пример:</b> <code>/setrating rs</code>
-   • <code>/setrating</code> – <i>Команда для установки рейтинга</i>
+   • <code>/setrating</code> – <i>Команда установки рейтинга в текущем чате</i>
    • <code>rs</code> – <i>Рейтинг</i>
+
+   <b>Пример:</b> <code>/getrating</code>
+   • <code>/getrating</code> – <i>Команда для получения рейтинга в текущем чате</i>
 
    <b>Доступные рейтинги:</b>
    • <code>rs</code> <i>- Безопасный (По умолчанию)</i>

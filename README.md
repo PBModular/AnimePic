@@ -18,8 +18,12 @@ This module for [PBModular](https://github.com/PBModular/bot) is designed to req
 
 <b>Example:</b> <code>/setrating rs</code>
 
-- <code>/setrating</code> – <i>Command for setting the rating</i>
+- <code>/setrating</code> – <i>Command to set the rating in the current chat</i>
 - <code>rs</code> – <i>Rating</i>
+
+<b>Example:</b> <code>/getrating</code>
+
+- <code>/getrating</code> – <i>Command to get rating in the current chat</i>
 
 <b>Available ratings:</b>
 

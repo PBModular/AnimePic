@@ -94,6 +94,14 @@ class AnimePicModule(BaseModule):
         else:
             await message.reply(self.S["rating"]["failure"].format(rating=rating))
 
+    @command("getrating")
+    async def get_rating_cmd(self, bot: Client, message: Message):
+        rating = await self.get_chat_rating(message.chat.id)
+        if not "random" in rating:
+           rating = rating.replace("rating%3a", "")
+            
+        await message.reply(self.S["rating"]["current"].format(rating=rating))
+        
     async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:

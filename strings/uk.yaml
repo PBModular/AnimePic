@@ -14,6 +14,7 @@ rating:
     • <code>rq</code> <i>- Спірний</i>
     • <code>re</code> <i>- Відвертий</i>
     • <code>r</code> <i>– Випадковий</i>
+  current: Поточний рейтинг - <i>"{rating}"</i>.
 
 process:
   tags_not_found: Не знайдено зображень для зазначених тегів.
@@ -32,8 +33,11 @@ help: |
    • <code>cyberpunk</code> – <i>Тег для пошуку (Може бути декілька)</i>
 
    <b>Приклад:</b> <code>/setrating rs</code>
-   • <code>/setrating</code> – <i>Команда для встановлення рейтингу</i>
+   • <code>/setrating</code> – <i>Команда для встановлення рейтингу в поточному чаті</i>
    • <code>rs</code> – <i>Рейтинг</i>
+
+   <b>Приклад:</b> <code>/getrating</code>
+   • <code>/getrating</code> – <i>Команда для отримання рейтингу в поточному чаті</i>
 
    <b>Доступні рейтинги:</b>
    • <code>rs</code> <i>- Безпечний (За замовчуванням)</i>
