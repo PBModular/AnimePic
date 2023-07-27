@@ -92,8 +92,7 @@ class AnimePicModule(BaseModule):
         if success:
             await message.reply(self.S["rating"]["success"].format(rating=rating))
         else:
-            await message.reply(self.S["rating"]["usage"])
-
+            await message.reply(self.S["rating"]["failure"].format(rating=rating))
 
     async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
