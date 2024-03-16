@@ -25,6 +25,11 @@ This module for [PBModular](https://github.com/PBModular/bot) is designed to req
 
 - <code>/getrating</code> – <i>Command to get rating in the current chat</i>
 
+<b>Example:</b> <code>/limit 10</code>
+
+- <code>/limit</code> - <i>Command to set/view the current image request limit</i>
+- <code>10</code> - <i>Limit (If not specified, the current limit will be shown)</i>
+
 <b>Available ratings:</b>
 
 - <code>rs</code> <i>– Safe (Default)</i>

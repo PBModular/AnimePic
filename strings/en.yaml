@@ -1,5 +1,8 @@
 pic:
   arg_not_found: Please specify search tags!
+  limit_exceeded: | 
+    Specified number of images exceeded current limit in chat.
+    <b>Current image limit:</b> <code>{limit}</code>
 
 rating:
   arg_invalid: |
@@ -15,6 +18,16 @@ rating:
     • <code>re</code> <i>– Explicit</i>
     • <code>r</code> <i>– Random</i>
   current: Current rating is <i>"{rating}"</i>.
+
+limit:
+  arg_invalid: |
+   Please specify limit!
+   Run <code>/help AnimePic</code> for more details!
+  api_exceeded: Maximum image limit for API exceeded. Reducing to <code>100</code>
+  current_limit: <b>Current image limit:</b> <code>{limit}</code>
+  success: Limit changed to <code>{limit}</code>.
+  success_no_limit: The limit was turned off.
+  failure: Unable to set the limit!
 
 process:
   tags_not_found: No images found for the specified tags.
@@ -38,6 +51,10 @@ help: |
 
    <b>Example:</b> <code>/getrating</code>
    • <code>/getrating</code> – <i>Command to get rating in the current chat</i>
+   
+   <b>Example:</b> <code>/limit 10</code>
+   • <code>/limit</code> - <i>Command to set/view the current image request limit</i>
+   • <code>10</code> - <i>Limit (If not specified, the current limit will be shown)</i>
 
    <b>Available ratings:</b>
    • <code>rs</code> <i>– Safe (Default)</i>

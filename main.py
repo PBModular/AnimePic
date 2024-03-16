@@ -51,18 +51,40 @@ class AnimePicModule(BaseModule):
             session.add(chat_state)
             await session.commit()
             return True 
-            
+
+    async def get_chat_limit(self, chat_id):
+        async with self.db.session_maker() as session:
+            chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
+            if chat_state is not None:
+                return chat_state.limit
+        return 1
+
+    async def set_chat_limit(self, chat_id, limit):
+        async with self.db.session_maker() as session:
+            chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
+            if chat_state is None:
+                chat_state = ChatState(chat_id=chat_id)
+            chat_state.limit = limit
+            session.add(chat_state)
+            await session.commit()
+
+
     @command("pic")
     async def pic_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
-        limit = 1
+        limit = await self.get_chat_limit(message.chat.id)
         tags = []
 
         if args:
             if args[0].isdigit():
-                limit = int(args[0])
+                requested_limit = int(args[0])
+                if limit > 0 and requested_limit > limit:
+                    await message.reply(self.S["pic"]["limit_exceeded"].format(limit=limit))
+                    return
+                limit = requested_limit
                 tags = args[1:]
             else:
+                limit = 1
                 tags = args
 
         if not tags:
@@ -101,7 +123,31 @@ class AnimePicModule(BaseModule):
            rating = rating.replace("rating%3a", "")
             
         await message.reply(self.S["rating"]["current"].format(rating=rating))
+
+    @allowed_for("chat_admins")
+    @command("limit")
+    async def limit_cmd(self, bot: Client, message: Message):
+        args = message.text.split()[1:]
+
+        if not args:
+            limit = await self.get_chat_limit(message.chat.id)
+            await message.reply(self.S["limit"]["current_limit"].format(limit=limit))
+            return
         
+        if not args[0].isdigit():
+            await message.reply(self.S["limit"]["arg_invalid"])
+            return
+
+        limit = int(args[0])
+        await self.set_chat_limit(message.chat.id, limit)
+        if limit == 0:
+            await message.reply(self.S["limit"]["success_no_limit"])
+        elif limit > 100:
+            await message.reply(self.S["limit"]["api_exceeded"])
+            await self.set_chat_limit(message.chat.id, limit=100)
+        else:
+            await message.reply(self.S["limit"]["success"].format(limit=limit))
+
     async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
