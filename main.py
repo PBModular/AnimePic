@@ -100,7 +100,7 @@ class AnimePicModule(BaseModule):
         asyncio.create_task(self.clear_sent_photos(message.chat.id))
 
 
-    @allowed_for("chat_admins")
+    @allowed_for(["chat_admins", "chat_owner"])
     @command("setrating")
     async def set_rating_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
@@ -124,7 +124,7 @@ class AnimePicModule(BaseModule):
             
         await message.reply(self.S["rating"]["current"].format(rating=rating))
 
-    @allowed_for("chat_admins")
+    @allowed_for(["chat_admins", "chat_owner"])
     @command("limit")
     async def limit_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
