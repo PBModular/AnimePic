@@ -47,7 +47,7 @@ class AnimePicModule(BaseModule):
                 chat_state.rating = "random"
             else:
                 await session.rollback()
-                return False  # Invalid rating
+                return False
             session.add(chat_state)
             await session.commit()
             return True 
@@ -55,7 +55,7 @@ class AnimePicModule(BaseModule):
     async def get_chat_limit(self, chat_id):
         async with self.db.session_maker() as session:
             chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
-            if chat_state is not None:
+            if chat_state is not None and chat_state.limit is not None:
                 return chat_state.limit
         return 1
 
@@ -152,32 +152,42 @@ class AnimePicModule(BaseModule):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
                 results = await gel.search_posts(tags, limit=int(limit), random=True)
+                # self.logger.info(results)
             except KeyError:
                 await message.reply(self.S["process"]["tags_not_found"])
                 return
-            
-        if results:
-            for photo in results:
-                file_url = str(photo.file_url)
-                chat_id = message.chat.id
-                if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
-                    try:
-                        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)]])
-                        await message.reply_photo(
-                            photo=file_url,
-                            caption=self.S["process"]['credit'],
-                            reply_markup=keyboard
-                        )
-                        
-                        self.sent_photos.setdefault(chat_id, []).append(file_url)
-                        await asyncio.sleep(1)
-                        
-                    except (errors.WebpageCurlFailed, errors.FloodWait, Exception) as e:
-                        self.logger.error(e)
-                        if isinstance(e, errors.WebpageCurlFailed):
-                            await message.reply(self.S["process"]["curl_error"])
-                        elif isinstance(e, errors.FloodWait):
-                            await asyncio.sleep(31)
-                        else:
-                            await message.reply(self.S["process"]["error"])
-                        continue
+
+        chat_id = message.chat.id
+        new_photos = []
+        
+        for photo in results:
+            file_url = str(photo.file_url)
+            if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
+                new_photos.append(photo)
+
+        if not new_photos:
+            await message.reply(self.S["process"]["no_results"])
+            return
+
+        for photo in new_photos:
+            file_url = str(photo.file_url)
+            try:
+                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)]])
+                await message.reply_photo(
+                    photo=file_url,
+                    caption=self.S["process"]['credit'],
+                    reply_markup=keyboard
+                )
+
+                self.sent_photos.setdefault(chat_id, []).append(file_url)
+                await asyncio.sleep(1)
+
+            except (errors.WebpageCurlFailed, errors.FloodWait, Exception) as e:
+                self.logger.error(e)
+                if isinstance(e, errors.WebpageCurlFailed):
+                    await message.reply(self.S["process"]["curl_error"])
+                elif isinstance(e, errors.FloodWait):
+                    await asyncio.sleep(31)
+                else:
+                    await message.reply(self.S["process"]["error"])
+                continue
