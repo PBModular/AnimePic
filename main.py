@@ -182,12 +182,11 @@ class AnimePicModule(BaseModule):
                 self.sent_photos.setdefault(chat_id, []).append(file_url)
                 await asyncio.sleep(1)
 
-            except (errors.WebpageCurlFailed, errors.FloodWait, Exception) as e:
+            except errors.WebpageCurlFailed or errors.WebpageMediaEmpty:
+                await message.reply(self.S["process"]["curl_error"])
+            except errors.FloodWait:
+                await asyncio.sleep(31)
+            except Exception as e:
+                await message.reply(self.S["process"]["error"])
                 self.logger.error(e)
-                if isinstance(e, errors.WebpageCurlFailed):
-                    await message.reply(self.S["process"]["curl_error"])
-                elif isinstance(e, errors.FloodWait):
-                    await asyncio.sleep(31)
-                else:
-                    await message.reply(self.S["process"]["error"])
-                continue
+            continue
