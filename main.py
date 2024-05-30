@@ -1,7 +1,7 @@
-from pyrogram import Client, errors
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram import Client, errors, filters
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from python_gelbooru import AsyncGelbooru
-from base.module import BaseModule, command, allowed_for
+from base.module import BaseModule, command, allowed_for, callback_query
 from .db import Base, ChatState
 from sqlalchemy import select
 import asyncio
@@ -15,11 +15,11 @@ class AnimePicModule(BaseModule):
             "rq": "rating%3aquestionable",
             "rs": "rating%3asafe"
         }
-        
+
     @property
     def help_page(self):
         return self.S["help"]
- 
+
     @property
     def db_meta(self):
         return Base.metadata    
@@ -28,14 +28,14 @@ class AnimePicModule(BaseModule):
         await asyncio.sleep(3600)
         if chat_id in self.sent_photos:
             del self.sent_photos[chat_id]
-            
+
     async def get_chat_rating(self, chat_id):
         async with self.db.session_maker() as session:
             chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
             if chat_state is not None:
                 return chat_state.rating
         return "rating%3asafe"
-        
+
     async def set_chat_rating(self, chat_id, rating):
         async with self.db.session_maker() as session:
             chat_state = await session.scalar(select(ChatState).where(ChatState.chat_id == chat_id))
@@ -68,7 +68,6 @@ class AnimePicModule(BaseModule):
             session.add(chat_state)
             await session.commit()
 
-
     @command("pic")
     async def pic_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
@@ -99,7 +98,6 @@ class AnimePicModule(BaseModule):
         await self.process(bot, message, tags, limit)
         asyncio.create_task(self.clear_sent_photos(message.chat.id))
 
-
     @allowed_for(["chat_admins", "chat_owner"])
     @command("setrating")
     async def set_rating_cmd(self, bot: Client, message: Message):
@@ -120,8 +118,8 @@ class AnimePicModule(BaseModule):
     async def get_rating_cmd(self, bot: Client, message: Message):
         rating = await self.get_chat_rating(message.chat.id)
         if not "random" in rating:
-           rating = rating.replace("rating%3a", "")
-            
+            rating = rating.replace("rating%3a", "")
+
         await message.reply(self.S["rating"]["current"].format(rating=rating))
 
     @allowed_for(["chat_admins", "chat_owner"])
@@ -159,7 +157,7 @@ class AnimePicModule(BaseModule):
 
         chat_id = message.chat.id
         new_photos = []
-        
+
         for photo in results:
             file_url = str(photo.file_url)
             if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
@@ -172,7 +170,13 @@ class AnimePicModule(BaseModule):
         for photo in new_photos:
             file_url = str(photo.file_url)
             try:
-                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)]])
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)]
+                ])
+                
+                if limit == 1:
+                    keyboard.inline_keyboard.append([InlineKeyboardButton(self.S["process"]["next_image"], callback_data="refresh_status")])
+
                 await message.reply_photo(
                     photo=file_url,
                     caption=self.S["process"]['credit'],
@@ -190,3 +194,58 @@ class AnimePicModule(BaseModule):
                 await message.reply(self.S["process"]["error"])
                 self.logger.error(e)
             continue
+
+    @callback_query(filters.regex("refresh_status"))
+    async def handle_callback_query(self, bot: Client, callback_query):
+        chat_id = callback_query.message.chat.id
+        await self.update_image(bot, callback_query, chat_id)
+
+    async def update_image(self, bot: Client, callback_query, chat_id):
+        tags = [await self.get_chat_rating(chat_id)]
+        if tags[0] == "random":
+            tags = []
+
+        async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
+            try:
+                results = await gel.search_posts(tags, limit=1, random=True)
+                # self.logger.info(results)
+            except KeyError:
+                await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
+                return
+
+        if not results:
+            await callback_query.answer(self.S["process"]["no_results"], show_alert=True)
+            return
+
+        new_photo = results[0]
+        file_url = str(new_photo.file_url)
+
+        while file_url in self.sent_photos.get(chat_id, []):
+            try:
+                results = await gel.search_posts(tags, limit=1, random=True)
+                new_photo = results[0]
+                file_url = str(new_photo.file_url)
+            except KeyError:
+                await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
+                return
+
+        try:
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton(self.S["process"]["button"].format(file_url=file_url), url=file_url)],
+                [InlineKeyboardButton(self.S["process"]["next_image"], callback_data="refresh_status")]
+            ])
+            await callback_query.message.edit_media(
+                media=InputMediaPhoto(file_url),
+                reply_markup=keyboard
+            )
+
+            self.sent_photos.setdefault(chat_id, []).append(file_url)
+            await callback_query.answer()
+
+        except errors.WebpageCurlFailed or errors.WebpageMediaEmpty:
+            await callback_query.answer(self.S["process"]["curl_error"], show_alert=True)
+        except errors.FloodWait:
+            await asyncio.sleep(31)
+        except Exception as e:
+            await callback_query.answer(self.S["process"]["error"], show_alert=True)
+            self.logger.error(e)

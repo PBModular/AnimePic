@@ -34,6 +34,7 @@ process:
   no_results: No more images found for specified tags.
   credit: Here's an image from Gelbooru.
   button: Link to image
+  next_image: Next image
   curl_error: Image URL could not be processed. A Pavel Durov moment?
   error: Unexpected error. Check bot logs.
 
