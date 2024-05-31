@@ -29,6 +29,12 @@ limit:
   success_no_limit: The limit was turned off.
   failure: Unable to set the limit!
 
+tagsearch:
+  prev: Previous
+  next: Next
+  arg_invalid: Please provide a tag for search.
+  tags_not_found: No tags found.
+
 process:
   tags_not_found: No images found for specified tags.
   no_results: No more images found for specified tags.

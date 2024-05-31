@@ -1,4 +1,4 @@
-from pyrogram import Client, errors, filters
+from pyrogram import Client, errors, filters, enums
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from python_gelbooru import AsyncGelbooru
 from base.module import BaseModule, command, allowed_for, callback_query
@@ -146,6 +146,74 @@ class AnimePicModule(BaseModule):
         else:
             await message.reply(self.S["limit"]["success"].format(limit=limit))
 
+    @command("tagsearch")
+    async def tagsearch_cmd(self, bot: Client, message: Message):
+        args = message.text.split()[1:]
+        if not args:
+            await message.reply(self.S["tagsearch"]["arg_invalid"])
+            return
+
+        query = args[0]
+        page = 1
+        tags, total_pages = await self.search_tags(query, page)
+        
+        if not tags:
+            await message.reply(self.S["tagsearch"]["tags_not_found"])
+            return
+        
+        await self.send_tag_list(message, tags, query, page, total_pages)
+
+    async def search_tags(self, query, page):
+        async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
+            try:
+                all_tags = await gel.search_tags(name_pattern=f"%{query}%", limit=1000)
+            except Exception as e:
+                self.logger.error(e)
+                return [], 1
+
+        tags_per_page = 15
+        total_pages = (len(all_tags) + tags_per_page - 1) // tags_per_page
+        start = (page - 1) * tags_per_page
+        end = start + tags_per_page
+
+        tags = [tag.name for tag in all_tags[start:end]]
+
+        return tags, total_pages
+
+    async def send_tag_list(self, message, tags, query, page, total_pages):
+        tag_list = "\n".join(f"• `{tag}`" for tag in tags)
+
+        buttons = []
+
+        if page > 1:
+            buttons.append(InlineKeyboardButton(self.S["tagsearch"]["prev"], callback_data=f"tagsearch_prev_{query}_{page - 1}"))
+        
+        buttons.append(InlineKeyboardButton(f"{page}/{total_pages}", callback_data="dummy"))
+        
+        if page < total_pages:
+            buttons.append(InlineKeyboardButton(self.S["tagsearch"]["next"], callback_data=f"tagsearch_next_{query}_{page + 1}"))
+
+        keyboard = InlineKeyboardMarkup([buttons])
+
+        if message.from_user.is_bot:
+            await message.edit_text(tag_list, reply_markup=keyboard, parse_mode=enums.ParseMode.MARKDOWN)
+        else:
+            await message.reply(tag_list, reply_markup=keyboard, parse_mode=enums.ParseMode.MARKDOWN)
+
+    @callback_query(filters.regex(r"tagsearch_(prev|next)_(.+?)_(\d+)"))
+    async def handle_pagination(self, bot: Client, callback_query):
+        action, query, page = callback_query.data.split("_")[1:]
+        page = int(page)
+
+        tags, total_pages = await self.search_tags(query, page)
+        
+        await self.send_tag_list(callback_query.message, tags, query, page, total_pages)
+        await callback_query.answer()
+
+    @callback_query(filters.regex(r"dummy"))
+    async def dummy_callback(self, bot: Client, callback_query):
+        await callback_query.answer()
+        
     async def process(self, bot, message, tags, limit):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
