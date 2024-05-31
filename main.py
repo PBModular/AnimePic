@@ -117,8 +117,13 @@ class AnimePicModule(BaseModule):
             await message.reply(self.S["rating"]["arg_invalid"])
             return
 
-        rating = args[0]
-        success = await self.set_chat_rating(message.chat.id, rating)
+        user_rating = args[0]
+        success = await self.set_chat_rating(message.chat.id, user_rating)
+        rating = await self.get_chat_rating(message.chat.id)
+        
+        if not "random" in rating:
+            rating = rating.replace("rating%3a", "")
+        
         if success:
             await message.reply(self.S["rating"]["success"].format(rating=rating))
         else:
