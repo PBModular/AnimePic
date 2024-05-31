@@ -5,6 +5,7 @@ from base.module import BaseModule, command, allowed_for, callback_query
 from .db import Base, ChatState
 from sqlalchemy import select
 import asyncio
+import os
 
 class AnimePicModule(BaseModule):
     def on_init(self):
@@ -17,6 +18,7 @@ class AnimePicModule(BaseModule):
         }
         self.task_pended = {}
         self.message_tags = {}
+        self.pavel_durov = os.getcwd() + "/pavel-durov.png"
 
     @property
     def help_page(self):
@@ -269,8 +271,13 @@ class AnimePicModule(BaseModule):
                 self.sent_photos.setdefault(chat_id, []).append(file_url)
                 await asyncio.sleep(1)
 
-            except errors.WebpageCurlFailed or errors.WebpageMediaEmpty:
-                await message.reply(self.S["process"]["curl_error"])
+            except (errors.WebpageCurlFailed, errors.WebpageMediaEmpty, errors.MediaEmpty):
+                await message.reply_photo(
+                    photo=self.pavel_durov,
+                    caption=self.S["process"]["curl_error"],
+                    reply_markup=keyboard
+                )
+                self.sent_photos.setdefault(chat_id, []).append(file_url)
             except errors.FloodWait:
                 await asyncio.sleep(31)
             except Exception as e:
@@ -325,7 +332,12 @@ class AnimePicModule(BaseModule):
             self.sent_photos.setdefault(chat_id, []).append(file_url)
             await callback_query.answer()
 
-        except errors.WebpageCurlFailed or errors.WebpageMediaEmpty:
+        except (errors.WebpageCurlFailed, errors.WebpageMediaEmpty, errors.MediaEmpty):
+            await callback_query.message.edit_media(
+                media=InputMediaPhoto(self.pavel_durov),
+                reply_markup=keyboard
+            )
+            self.sent_photos.setdefault(chat_id, []).append(file_url)
             await callback_query.answer(self.S["process"]["curl_error"], show_alert=True)
         except errors.FloodWait:
             await asyncio.sleep(31)
