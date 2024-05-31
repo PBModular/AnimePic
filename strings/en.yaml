@@ -63,7 +63,11 @@ help: |
    <b>Example:</b> <code>/limit 10</code>
    • <code>/limit</code> - <i>Command to set/view the current image request limit</i>
    • <code>10</code> - <i>Limit (If not specified, the current limit will be shown)</i>
-
+   
+   <b>Example:</b> <code>/tagsearch anything</code>
+   • <code>/tagsearch</code> - <i>Command to search for tags</i>
+   • <code>anything</code> - <i>Tag (Can be uncompleted)</i>
+   
    <b>Available ratings:</b>
    • <code>rs</code> <i>– Safe (Default)</i>
    • <code>rq</code> <i>– Questionable</i>
