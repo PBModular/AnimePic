@@ -284,29 +284,28 @@ class AnimePicModule(BaseModule):
         if not tags:
             return
 
-        async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
-            try:
-                results = await gel.search_posts(tags, limit=1, random=True)
-                # self.logger.info(results)
-            except KeyError:
-                await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
-                return
+        attempt = 0
+        new_photo = False
+        photo = None
 
-        if not results:
-            await callback_query.answer(self.S["process"]["no_results"], show_alert=True)
+        while attempt < 5 and not new_photo:
+            async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
+                try:
+                    results = await gel.search_posts(tags, limit=1, random=True)
+                except KeyError:
+                    await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
+                    return
+
+            photo = results[0]
+            file_url = str(photo.file_url)
+            if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
+                new_photo = True
+            else:
+                attempt += 1
+
+        if not new_photo:
+            await callback_query.answer(self.S["process"]["no_results"])
             return
-
-        new_photo = results[0]
-        file_url = str(new_photo.file_url)
-
-        while file_url in self.sent_photos.get(chat_id, []):
-            try:
-                results = await gel.search_posts(tags, limit=1, random=True)
-                new_photo = results[0]
-                file_url = str(new_photo.file_url)
-            except KeyError:
-                await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
-                return
 
         try:
             keyboard = InlineKeyboardMarkup([
