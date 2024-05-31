@@ -16,6 +16,7 @@ class AnimePicModule(BaseModule):
             "rs": "rating%3asafe"
         }
         self.task_pended = {}
+        self.message_tags = {}
 
     @property
     def help_page(self):
@@ -25,11 +26,13 @@ class AnimePicModule(BaseModule):
     def db_meta(self):
         return Base.metadata    
     
-    async def clear_sent_photos(self, chat_id):
+    async def clear_cache(self, chat_id, message_id):
         self.task_pended[chat_id] = 1
         await asyncio.sleep(3600)
         if chat_id in self.sent_photos:
             del self.sent_photos[chat_id]
+        if message_id in self.message_tags:
+            del self.message_tags[message_id]
         self.task_pended[chat_id] = 0
 
     async def get_chat_rating(self, chat_id):
@@ -97,6 +100,8 @@ class AnimePicModule(BaseModule):
         rating = await self.get_chat_rating(chat_id)
         if rating != "random":
             tags.insert(0, rating)
+
+        self.message_tags[message.id] = tags
 
         await self.process(bot, message, tags, limit)
 
@@ -271,12 +276,13 @@ class AnimePicModule(BaseModule):
     @callback_query(filters.regex("refresh_status"))
     async def handle_callback_query(self, bot: Client, callback_query):
         chat_id = callback_query.message.chat.id
-        await self.update_image(bot, callback_query, chat_id)
+        message_id = callback_query.message.reply_to_message.id
+        await self.update_image(bot, callback_query, chat_id, message_id)
 
-    async def update_image(self, bot: Client, callback_query, chat_id):
-        tags = [await self.get_chat_rating(chat_id)]
-        if tags[0] == "random":
-            tags = []
+    async def update_image(self, bot: Client, callback_query, chat_id, message_id):
+        tags = self.message_tags.get(message_id, [])
+        if not tags:
+            return
 
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
