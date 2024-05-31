@@ -15,6 +15,7 @@ class AnimePicModule(BaseModule):
             "rq": "rating%3aquestionable",
             "rs": "rating%3asafe"
         }
+        self.task_pended = {}
 
     @property
     def help_page(self):
@@ -25,9 +26,11 @@ class AnimePicModule(BaseModule):
         return Base.metadata    
     
     async def clear_sent_photos(self, chat_id):
+        self.task_pended[chat_id] = 1
         await asyncio.sleep(3600)
         if chat_id in self.sent_photos:
             del self.sent_photos[chat_id]
+        self.task_pended[chat_id] = 0
 
     async def get_chat_rating(self, chat_id):
         async with self.db.session_maker() as session:
@@ -96,7 +99,9 @@ class AnimePicModule(BaseModule):
             tags.insert(0, rating)
 
         await self.process(bot, message, tags, limit)
-        asyncio.create_task(self.clear_sent_photos(message.chat.id))
+
+        if self.task_pended.get(message.chat.id, 0) == 0:
+            asyncio.create_task(self.clear_cache(message.chat.id, message.id))
 
     @allowed_for(["chat_admins", "chat_owner"])
     @command("setrating")
