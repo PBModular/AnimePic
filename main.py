@@ -19,6 +19,7 @@ class AnimePicModule(BaseModule):
         self.task_pended = {}
         self.message_tags = {}
         self.pavel_durov = os.getcwd() + "/pavel-durov.png"
+        self.processing_locks = {}
 
     @property
     def help_page(self):
@@ -289,7 +290,15 @@ class AnimePicModule(BaseModule):
     async def handle_callback_query(self, bot: Client, callback_query):
         chat_id = callback_query.message.chat.id
         message_id = callback_query.message.reply_to_message.id
-        await self.update_image(bot, callback_query, chat_id, message_id)
+        
+        if chat_id not in self.processing_locks:
+            self.processing_locks[chat_id] = asyncio.Lock()
+        lock = self.processing_locks[chat_id]
+        if lock.locked():
+            return
+        
+        async with lock:
+            await self.update_image(bot, callback_query, chat_id, message_id)
 
     async def update_image(self, bot: Client, callback_query, chat_id, message_id):
         tags = self.message_tags.get(message_id, [])
