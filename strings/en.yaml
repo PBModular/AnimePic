@@ -5,9 +5,6 @@ pic:
     <b>Current image limit:</b> <code>{limit}</code>
 
 rating:
-  arg_invalid: |
-   Please specify rating tags!
-   Run <code>/help AnimePic</code> for more details!
   success: Rating "{rating}" is set by default for this chat room.
   failure: |
     <b>Cannot set rating "{rating}" for this chat room!</b>
@@ -17,7 +14,9 @@ rating:
     • <code>rq</code> <i>– Questionable</i>
     • <code>re</code> <i>– Explicit</i>
     • <code>r</code> <i>– Random</i>
-  current: Current rating is <i>"{rating}"</i>.
+  current: |
+    Current rating is <i>"{rating}"</i>.
+    To set rating, add argument (Run <code>/mhelp AnimePic</code> for more details!)
 
 limit:
   arg_invalid: |
@@ -53,12 +52,9 @@ help: |
    • <code>5</code> – <i>Number of images (Optional, 1 if not specified)</i>
    • <code>cyberpunk</code> – <i>Tag for search (Can be many)</i>
 
-   <b>Example:</b> <code>/setrating rs</code>
-   • <code>/setrating</code> – <i>Command to set the rating in the current chat</i>
-   • <code>rs</code> – <i>Rating</i>
-
-   <b>Example:</b> <code>/getrating</code>
-   • <code>/getrating</code> – <i>Command to get rating in the current chat</i>
+   <b>Example:</b> <code>/rating rs</code>
+   • <code>/rating</code> – <i>Command to set/view rating in the current chat</i>
+   • <code>rs</code> – <i>Rating</i> (If not specified, the current rating will be shown)
    
    <b>Example:</b> <code>/limit 10</code>
    • <code>/limit</code> - <i>Command to set/view the current image request limit</i>

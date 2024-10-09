@@ -112,12 +112,16 @@ class AnimePicModule(BaseModule):
             asyncio.create_task(self.clear_cache(message.chat.id, message.id))
 
     @allowed_for(["chat_admins", "chat_owner"])
-    @command("setrating")
-    async def set_rating_cmd(self, bot: Client, message: Message):
+    @command("rating")
+    async def rating_cmd(self, bot: Client, message: Message):
         args = message.text.split()[1:]
 
         if not args:
-            await message.reply(self.S["rating"]["arg_invalid"])
+            rating = await self.get_chat_rating(message.chat.id)
+            if not "random" in rating:
+                rating = rating.replace("rating%3a", "")
+
+            await message.reply(self.S["rating"]["current"].format(rating=rating))
             return
 
         user_rating = args[0]
@@ -131,14 +135,6 @@ class AnimePicModule(BaseModule):
             await message.reply(self.S["rating"]["success"].format(rating=rating))
         else:
             await message.reply(self.S["rating"]["failure"].format(rating=rating))
-
-    @command("getrating")
-    async def get_rating_cmd(self, bot: Client, message: Message):
-        rating = await self.get_chat_rating(message.chat.id)
-        if not "random" in rating:
-            rating = rating.replace("rating%3a", "")
-
-        await message.reply(self.S["rating"]["current"].format(rating=rating))
 
     @allowed_for(["chat_admins", "chat_owner"])
     @command("limit")
