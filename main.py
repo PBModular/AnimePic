@@ -288,9 +288,12 @@ class AnimePicModule(BaseModule):
 
     @callback_query(filters.regex("refresh_status"))
     async def handle_callback_query(self, bot: Client, callback_query):
-        chat_id = callback_query.message.chat.id
-        message_id = callback_query.message.reply_to_message.id
-        
+        try:
+            chat_id = callback_query.message.chat.id
+            message_id = callback_query.message.reply_to_message.id
+        except Exception:
+            return
+
         if chat_id not in self.processing_locks:
             self.processing_locks[chat_id] = asyncio.Lock()
         lock = self.processing_locks[chat_id]
@@ -350,6 +353,8 @@ class AnimePicModule(BaseModule):
             await callback_query.answer(self.S["process"]["curl_error"], show_alert=True)
         except errors.FloodWait:
             await asyncio.sleep(31)
+        except errors.QueryIdInvalid:
+            pass
         except Exception as e:
             await callback_query.answer(self.S["process"]["error"], show_alert=True)
             self.logger.error(e)
