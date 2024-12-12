@@ -16,14 +16,10 @@ This module for [PBModular](https://github.com/PBModular/bot) is designed to req
 - <code>5</code> – <i>Number of images (Optional, 1 if not specified)</i>
 - <code>cyberpunk</code> – <i>Tag for search (Can be many)</i>
 
-<b>Example:</b> <code>/setrating rs</code>
+<b>Example:</b> <code>/rating rs</code>
 
-- <code>/setrating</code> – <i>Command to set the rating in the current chat</i>
+- <code>/rating</code> – <i>Command to set/view the rating in the current chat</i>
 - <code>rs</code> – <i>Rating</i>
-
-<b>Example:</b> <code>/getrating</code>
-
-- <code>/getrating</code> – <i>Command to get rating in the current chat</i>
 
 <b>Example:</b> <code>/limit 10</code>
 
