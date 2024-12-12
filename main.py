@@ -181,6 +181,8 @@ class AnimePicModule(BaseModule):
         async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
             try:
                 all_tags = await gel.search_tags(name_pattern=f"%{query}%", limit=1000)
+            except KeyError:
+                return [], 1
             except Exception as e:
                 self.logger.error(e)
                 return [], 1
