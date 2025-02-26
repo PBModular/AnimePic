@@ -3,6 +3,7 @@ pic:
   limit_exceeded: | 
     Specified number of images exceeded current limit in chat.
     <b>Current image limit:</b> <code>{limit}</code>
+  rate_limit: Rate limited, please try again in {value} seconds
 
 rating:
   success: Rating "{rating}" is set by default for this chat room.
@@ -42,6 +43,7 @@ process:
   next_image: Next image
   curl_error: Image URL could not be processed. A Pavel Durov moment?
   error: Unexpected error. Check bot logs.
+  lock: Please wait, already processing a request
 
 help: |
    <b>Description:</b> 
