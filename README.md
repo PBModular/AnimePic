@@ -26,6 +26,11 @@ This module for [PBModular](https://github.com/PBModular/bot) is designed to req
 - <code>/limit</code> - <i>Command to set/view the current image request limit</i>
 - <code>10</code> - <i>Limit (If not specified, the current limit will be shown)</i>
 
+<b>Example:</b> <code>/tagsearch cat_girl</code>
+
+- <code>/tagsearch</code> – <i>Command to search for tags on Gelbooru</i>
+- <code>cat_girl</code> – <i>The query to search for tags (e.g., "blue_hair", "1girl")</i>
+
 <b>Available ratings:</b>
 
 - <code>rs</code> <i>– Safe (Default)</i>
