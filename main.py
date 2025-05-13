@@ -23,7 +23,7 @@ class AnimePicModule(BaseModule):
         self.processing_locks: Dict[int, asyncio.Lock] = {}
         self.cache_cleanup_tasks: Dict[int, asyncio.Task] = {}
         
-        self.fallback_image = os.path.join(os.getcwd(), "pavel-durov.png")
+        self.fallback_image = os.path.join(self.module_path, "pavel-durov.png")
         
         if not os.path.exists(self.fallback_image):
             self.logger.warning(f"Fallback image not found at {self.fallback_image}")
