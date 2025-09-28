@@ -1,15 +1,18 @@
 from pyrogram import Client, errors, filters, enums
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from python_gelbooru import AsyncGelbooru
+import aiohttp
+import random
 from base.module import BaseModule, command, allowed_for, callback_query
 from .db import Base, ChatState
 from sqlalchemy import select
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple, Set, Optional, Any
 import asyncio
 import os
 
 
 class AnimePicModule(BaseModule):
+    GELBOORU_API_URL = "https://gelbooru.com/index.php"
+
     def on_init(self):
         self.api_key, self.user_id = "None", "None"
         self.sent_photos: Dict[int, Set[str]] = {}
@@ -27,6 +30,88 @@ class AnimePicModule(BaseModule):
         
         if not os.path.exists(self.fallback_image):
             self.logger.warning(f"Fallback image not found at {self.fallback_image}")
+
+        self.http_session = aiohttp.ClientSession()
+
+    def on_stop(self):
+        if self.http_session and not self.http_session.closed:
+            asyncio.create_task(self.http_session.close())
+
+    async def _make_api_request(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        params.update({
+            "page": "dapi",
+            "q": "index",
+            "json": 1,
+            "api_key": self.api_key,
+            "user_id": self.user_id,
+        })
+
+        try:
+            async with self.http_session.get(self.GELBOORU_API_URL, params=params) as response:
+                if response.status != 200:
+                    self.logger.error(f"Gelbooru API request failed with status {response.status}: {params}")
+                    return None
+
+                text_response = await response.text()
+                if not text_response:
+                    return {}
+                return await response.json(content_type=None)
+        except aiohttp.ClientError as e:
+            self.logger.error(f"AIOHTTP client error during Gelbooru API request: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error decoding Gelbooru API response: {e}")
+            return None
+
+    async def gelbooru_search_tags(self, name_pattern: str, limit: int = 1000) -> List[Dict[str, Any]]:
+        params = {
+            "s": "tag",
+            "name_pattern": name_pattern,
+            "limit": limit,
+            "orderby": "count",
+        }
+        data = await self._make_api_request(params)
+
+        if not data or "tag" not in data:
+            return []
+
+        tags = data["tag"]
+        if isinstance(tags, dict):
+            return [tags]
+        return tags
+
+    async def gelbooru_search_posts(self, tags: List[str], limit: int, random_posts: bool) -> List[Dict[str, Any]]:
+        """Searches for posts on Gelbooru."""
+        tag_str = " ".join(tags)
+
+        if random_posts:
+            count_params = {"s": "post", "tags": tag_str, "limit": 0}
+            count_data = await self._make_api_request(count_params)
+
+            if not count_data or "@attributes" not in count_data or "count" not in count_data["@attributes"]:
+                self.logger.warning(f"Could not retrieve post count for tags: {tag_str}")
+                return []
+
+            count = int(count_data["@attributes"]["count"])
+            if count == 0:
+                return []
+
+            max_pid = (count - 1) // limit if limit > 0 else 0
+            random_pid = random.randint(0, max_pid)
+
+            fetch_params = {"s": "post", "tags": tag_str, "limit": limit, "pid": random_pid}
+        else:
+            fetch_params = {"s": "post", "tags": tag_str, "limit": limit, "pid": 0}
+
+        data = await self._make_api_request(fetch_params)
+
+        if not data or "post" not in data:
+            return []
+
+        posts = data["post"]
+        if isinstance(posts, dict):
+            return [posts]
+        return posts
 
     @property
     def help_page(self):
@@ -232,14 +317,9 @@ class AnimePicModule(BaseModule):
             return [], 1
             
         try:
-            async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
-                try:
-                    all_tags = await gel.search_tags(name_pattern=f"%{query}%", limit=1000)
-                except KeyError:
-                    return [], 1
-                except Exception as e:
-                    self.logger.error(f"Error searching tags: {e}")
-                    return [], 1
+            all_tags = await self.gelbooru_search_tags(name_pattern=f"%{query}%")
+            if not all_tags:
+                return [], 1
 
             tags_per_page = 15
             total_pages = (len(all_tags) + tags_per_page - 1) // tags_per_page
@@ -247,7 +327,7 @@ class AnimePicModule(BaseModule):
             start = (page - 1) * tags_per_page
             end = start + tags_per_page
             
-            tags = [tag.name for tag in all_tags[start:end]]
+            tags = [tag['name'] for tag in all_tags[start:end]]
             
             return tags, total_pages
         except Exception as e:
@@ -318,23 +398,14 @@ class AnimePicModule(BaseModule):
             return
             
         limit = min(limit, 100)
-        
         chat_id = message.chat.id
         
-        try:
-            async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
-                try:
-                    results = await gel.search_posts(tags, limit=limit, random=True)
-                except KeyError:
-                    await message.reply(self.S["process"]["tags_not_found"])
-                    return
-                except Exception as e:
-                    self.logger.error(f"Error searching posts: {e}")
-                    await message.reply(self.S["process"]["error"])
-                    return
-        except Exception as e:
-            self.logger.error(f"Error connecting to Gelbooru: {e}")
+        results = await self.gelbooru_search_posts(tags, limit=limit, random_posts=True)
+        if results is None:
             await message.reply(self.S["process"]["error"])
+            return
+        if not results:
+            await message.reply(self.S["process"]["tags_not_found"])
             return
             
         if chat_id not in self.sent_photos:
@@ -342,8 +413,8 @@ class AnimePicModule(BaseModule):
             
         new_photos = []
         for photo in results:
-            file_url = str(photo.file_url)
-            if file_url not in self.sent_photos[chat_id]:
+            file_url = str(photo.get('file_url', ''))
+            if file_url and file_url not in self.sent_photos[chat_id]:
                 new_photos.append(photo)
         
         if not new_photos:
@@ -351,7 +422,7 @@ class AnimePicModule(BaseModule):
             return
         
         for photo in new_photos:
-            file_url = str(photo.file_url)
+            file_url = str(photo.get('file_url', ''))
             
             try:
                 keyboard = InlineKeyboardMarkup([
@@ -424,39 +495,28 @@ class AnimePicModule(BaseModule):
         
         max_attempts = 5
         attempt = 0
-        new_photo = False
         photo = None
         file_url = None
         
-        while attempt < max_attempts and not new_photo:
-            try:
-                async with AsyncGelbooru(api_key=self.api_key, user_id=self.user_id) as gel:
-                    try:
-                        results = await gel.search_posts(tags, limit=1, random=True)
-                        if not results:
-                            await callback_query.answer(self.S["process"]["no_results"], show_alert=True)
-                            return
-                    except KeyError:
-                        await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
-                        return
-                    except Exception as e:
-                        self.logger.error(f"Error searching posts: {e}")
-                        await callback_query.answer(self.S["process"]["error"], show_alert=True)
-                        return
-                        
-                photo = results[0]
-                file_url = str(photo.file_url)
-                
-                if chat_id not in self.sent_photos or file_url not in self.sent_photos[chat_id]:
-                    new_photo = True
-                else:
-                    attempt += 1
-                    
-            except Exception as e:
-                self.logger.error(f"Error in update_image attempt {attempt}: {e}")
-                attempt += 1
-        
-        if not new_photo:
+        while attempt < max_attempts:
+            results = await self.gelbooru_search_posts(tags, limit=1, random_posts=True)
+            if not results:
+                if attempt == 0:
+                    await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)
+                    return
+                break
+
+            candidate_photo = results[0]
+            candidate_url = str(candidate_photo.get('file_url', ''))
+
+            if chat_id not in self.sent_photos or candidate_url not in self.sent_photos[chat_id]:
+                photo = candidate_photo
+                file_url = candidate_url
+                break
+            
+            attempt += 1
+
+        if not photo:
             await callback_query.answer(self.S["process"]["no_results"], show_alert=True)
             return
         
