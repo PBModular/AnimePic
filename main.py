@@ -14,7 +14,7 @@ class AnimePicModule(BaseModule):
     GELBOORU_API_URL = "https://gelbooru.com/index.php"
 
     def on_init(self):
-        self.api_key, self.user_id = "None", "None"
+        self.api_key, self.user_id = "None", "None" # Paste your credentials
         self.sent_photos: Dict[int, Set[str]] = {}
         self.ratings = {
             "re": "rating%3aexplicit",
@@ -37,7 +37,13 @@ class AnimePicModule(BaseModule):
         if self.http_session and not self.http_session.closed:
             asyncio.create_task(self.http_session.close())
 
-    async def _make_api_request(self, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _make_api_request(self, params: Dict[str, Any]) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Makes a request to the Gelbooru API.
+        Returns a tuple: (data, error_type).
+        On success, error_type is None.
+        On failure, data is None and error_type is a string ('unauthorized', 'api_error', 'network_error').
+        """
         params.update({
             "page": "dapi",
             "q": "index",
@@ -45,56 +51,64 @@ class AnimePicModule(BaseModule):
             "api_key": self.api_key,
             "user_id": self.user_id,
         })
-
         try:
             async with self.http_session.get(self.GELBOORU_API_URL, params=params) as response:
+                if response.status == 401:
+                    self.logger.error(f"Gelbooru API request failed with status 401 (Unauthorized). API Key and User ID may be missing or invalid.")
+                    return None, "unauthorized"
                 if response.status != 200:
                     self.logger.error(f"Gelbooru API request failed with status {response.status}: {params}")
-                    return None
+                    return None, "api_error"
 
                 text_response = await response.text()
                 if not text_response:
-                    return {}
-                return await response.json(content_type=None)
+                    return {}, None
+                return await response.json(content_type=None), None
         except aiohttp.ClientError as e:
             self.logger.error(f"AIOHTTP client error during Gelbooru API request: {e}")
-            return None
+            return None, "network_error"
         except Exception as e:
             self.logger.error(f"Error decoding Gelbooru API response: {e}")
-            return None
+            return None, "api_error"
 
-    async def gelbooru_search_tags(self, name_pattern: str, limit: int = 1000) -> List[Dict[str, Any]]:
+    async def gelbooru_search_tags(self, name_pattern: str, limit: int = 1000) -> Tuple[List[Dict], Optional[str]]:
+        """Searches for tags. Returns (tags_list, error_type)."""
         params = {
             "s": "tag",
             "name_pattern": name_pattern,
             "limit": limit,
             "orderby": "count",
         }
-        data = await self._make_api_request(params)
+        data, error = await self._make_api_request(params)
 
+        if error:
+            return [], error
+        
         if not data or "tag" not in data:
-            return []
+            return [], None
 
         tags = data["tag"]
         if isinstance(tags, dict):
-            return [tags]
-        return tags
+            return [tags], None
+        return tags, None
 
-    async def gelbooru_search_posts(self, tags: List[str], limit: int, random_posts: bool) -> List[Dict[str, Any]]:
-        """Searches for posts on Gelbooru."""
+    async def gelbooru_search_posts(self, tags: List[str], limit: int, random_posts: bool) -> Tuple[List[Dict], Optional[str]]:
+        """Searches for posts. Returns (posts_list, error_type)."""
         tag_str = " ".join(tags)
 
         if random_posts:
             count_params = {"s": "post", "tags": tag_str, "limit": 0}
-            count_data = await self._make_api_request(count_params)
+            count_data, error = await self._make_api_request(count_params)
 
+            if error:
+                return [], error
             if not count_data or "@attributes" not in count_data or "count" not in count_data["@attributes"]:
                 self.logger.warning(f"Could not retrieve post count for tags: {tag_str}")
-                return []
+                return [], None
 
             count = int(count_data["@attributes"]["count"])
             if count == 0:
-                return []
+                return [], None
 
             max_pid = (count - 1) // limit if limit > 0 else 0
             random_pid = random.randint(0, max_pid)
@@ -103,15 +117,17 @@ class AnimePicModule(BaseModule):
         else:
             fetch_params = {"s": "post", "tags": tag_str, "limit": limit, "pid": 0}
 
-        data = await self._make_api_request(fetch_params)
+        data, error = await self._make_api_request(fetch_params)
 
+        if error:
+            return [], error
         if not data or "post" not in data:
-            return []
+            return [], None
 
         posts = data["post"]
         if isinstance(posts, dict):
-            return [posts]
-        return posts
+            return [posts], None
+        return posts, None
 
     @property
     def help_page(self):
@@ -120,7 +136,7 @@ class AnimePicModule(BaseModule):
     @property
     def db_meta(self):
         return Base.metadata    
-    
+
     async def clear_cache(self, chat_id: int, message_id: int) -> None:
         self.task_pended[chat_id] = 1
         try:
@@ -296,15 +312,21 @@ class AnimePicModule(BaseModule):
     @command("tagsearch")
     async def tagsearch_cmd(self, bot: Client, message: Message) -> None:
         args = message.text.split()[1:]
-        
+
         if not args:
             await message.reply(self.S["tagsearch"]["arg_invalid"])
             return
 
         query = args[0]
         page = 1
+        tags, total_pages, error = await self.search_tags(query, page)
         
-        tags, total_pages = await self.search_tags(query, page)
+        if error == "unauthorized":
+            await message.reply(self.S["process"]["unauthorized_error"])
+            return
+        elif error:
+            await message.reply(self.S["process"]["error"])
+            return
         
         if not tags:
             await message.reply(self.S["tagsearch"]["tags_not_found"])
@@ -312,14 +334,16 @@ class AnimePicModule(BaseModule):
         
         await self.send_tag_list(message, tags, query, page, total_pages)
 
-    async def search_tags(self, query: str, page: int) -> Tuple[List[str], int]:
+    async def search_tags(self, query: str, page: int) -> Tuple[List[str], int, Optional[str]]:
         if not query or not isinstance(page, int) or page < 1:
-            return [], 1
+            return [], 1, None
             
         try:
-            all_tags = await self.gelbooru_search_tags(name_pattern=f"%{query}%")
+            all_tags, error = await self.gelbooru_search_tags(name_pattern=f"%{query}%")
+            if error:
+                return [], 1, error
             if not all_tags:
-                return [], 1
+                return [], 1, None
 
             tags_per_page = 15
             total_pages = (len(all_tags) + tags_per_page - 1) // tags_per_page
@@ -329,10 +353,10 @@ class AnimePicModule(BaseModule):
             
             tags = [tag['name'] for tag in all_tags[start:end]]
             
-            return tags, total_pages
+            return tags, total_pages, None
         except Exception as e:
             self.logger.error(f"Unexpected error in search_tags: {e}")
-            return [], 1
+            return [], 1, "api_error"
 
     async def send_tag_list(self, message: Message, tags: List[str], query: str, page: int, total_pages: int) -> None:
         tag_list = "\n".join(f"• `{tag}`" for tag in tags)
@@ -379,9 +403,13 @@ class AnimePicModule(BaseModule):
         try:
             action, query, page = callback_query.data.split("_")[1:]
             page = int(page)
+
+            tags, total_pages, error = await self.search_tags(query, page)
             
-            tags, total_pages = await self.search_tags(query, page)
-            
+            if error:
+                await callback_query.answer(self.S["process"]["error"], show_alert=True)
+                return
+
             await self.send_tag_list(callback_query.message, tags, query, page, total_pages)
             await callback_query.answer()
         except Exception as e:
@@ -399,11 +427,16 @@ class AnimePicModule(BaseModule):
             
         limit = min(limit, 100)
         chat_id = message.chat.id
+
+        results, error = await self.gelbooru_search_posts(tags, limit=limit, random_posts=True)
         
-        results = await self.gelbooru_search_posts(tags, limit=limit, random_posts=True)
-        if results is None:
+        if error == "unauthorized":
+            await message.reply(self.S["process"]["unauthorized_error"])
+            return
+        elif error:
             await message.reply(self.S["process"]["error"])
             return
+        
         if not results:
             await message.reply(self.S["process"]["tags_not_found"])
             return
@@ -499,7 +532,15 @@ class AnimePicModule(BaseModule):
         file_url = None
         
         while attempt < max_attempts:
-            results = await self.gelbooru_search_posts(tags, limit=1, random_posts=True)
+            results, error = await self.gelbooru_search_posts(tags, limit=1, random_posts=True)
+
+            if error == "unauthorized":
+                await callback_query.answer(self.S["process"]["unauthorized_error"], show_alert=True)
+                return
+            elif error:
+                await callback_query.answer(self.S["process"]["error"], show_alert=True)
+                return
+            
             if not results:
                 if attempt == 0:
                     await callback_query.answer(self.S["process"]["tags_not_found"], show_alert=True)

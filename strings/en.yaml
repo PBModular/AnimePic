@@ -44,6 +44,7 @@ process:
   curl_error: Image URL could not be processed. A Pavel Durov moment?
   error: Unexpected error. Check bot logs.
   lock: Please wait, already processing a request
+  unauthorized_error: API credentials are not configured or are invalid. Please contact the bot owner.
 
 help: |
    <b>Description:</b> 
