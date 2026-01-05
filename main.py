@@ -33,7 +33,7 @@ class AnimePicModule(BaseModule):
 
         self.http_session = aiohttp.ClientSession()
 
-    def on_stop(self):
+    def on_unload(self):
         if self.http_session and not self.http_session.closed:
             asyncio.create_task(self.http_session.close())
 
